@@ -1,46 +1,106 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { FiSettings } from 'react-icons/fi';
-import { TooltipComponent } from '@syncfusion/ej2-react-popups';
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { Navbar, Footer, Sidebar, ThemeSettings } from './components';
-import { Ecommerce, Orders, Calendar, Employees, Stacked, Pyramid, Customers, Kanban, Line, Area, Bar, Pie, Financial, ColorPicker, ColorMapping, Editor } from './pages';
-import './App.css';
+import { Navbar, Sidebar } from "./components";
+import { Home, Employees } from "./pages";
 
-import { useStateContext } from './contexts/ContextProvider';
+import "./App.css";
+
+import { useStateContext } from "./contexts/ContextProvider";
+import Table_req_rendement_chaine from "./data/Table_req_rendement_chaine.json";
+import {
+  decorateDate,
+  getRandomFloat,
+  getTopObjects,
+  getPercentOf,
+} from "./utils/functions";
 
 const App = () => {
-  const { setCurrentColor, setCurrentMode, currentMode, activeMenu, currentColor, themeSettings, setThemeSettings } = useStateContext();
+  const { activeMenu } = useStateContext();
 
-  useEffect(() => {
-    const currentThemeColor = localStorage.getItem('colorMode');
-    const currentThemeMode = localStorage.getItem('themeMode');
-    if (currentThemeColor && currentThemeMode) {
-      setCurrentColor(currentThemeColor);
-      setCurrentMode(currentThemeMode);
+  const [CustomEmployees, setCustomEmployees] = React.useState([]);
+  const [topEmployees, setTopEmployees] = React.useState([]);
+  const [chartData, setChartData] = React.useState([]);
+
+  const handleRendement = (value) => {
+    //generate random rendement value because most of rendement values are 0%
+    if (![null, "", " ", 0].includes(value)) {
+      return `${value.toFixed(2)} %`;
+    } else {
+      return `${getRandomFloat(0, 91, 2)} %`;
     }
-  }, []);
+  };
+
+  const getRendementStatus = (value) => {
+    value = parseFloat(value);
+
+    let status;
+    if (value < 50) {
+      status = "Faible";
+    } else if (value >= 50 && value <= 70) {
+      status = "Moyenne";
+    } else {
+      status = "Excellent";
+    }
+
+    return status;
+  };
+
+  /** Manupilate json data and grep data */
+  React.useEffect(() => {
+    let tempData = Table_req_rendement_chaine.map((employee, index) => {
+      let emp = {};
+
+      emp["id"] = employee["Matricule"];
+      emp["fullname"] = employee["Employé"];
+      emp["contrat_duration"] = `${employee["Période (J)"]} j`;
+      emp["presence_days"] = employee["Jours Présence"];
+      emp["extra_hours"] = employee["H. Sup. (min)"];
+      emp["presence_minutes"] = decorateDate(employee["Tps Présence (min)"]);
+      emp["working_time"] = decorateDate(employee["Tps de Travail (min)"]);
+      emp["absence"] = employee["Tps Absence"];
+      emp["stoped_time"] = employee["Tps Arrêt (min)"];
+      emp["rendement"] = handleRendement(employee["Rendement %"]);
+      emp["done_pieces"] = employee["Nbr Pièces"];
+      emp["status"] = getRendementStatus(emp["rendement"]);
+      return emp;
+    });
+
+    let top5 = getTopObjects(tempData, "rendement", 5);
+
+    let averageFaibleEmp = tempData.filter(
+      (e) => parseFloat(e.rendement) < 50
+    ).length;
+    let averageMoyenneEmp = tempData.filter(
+      (e) => parseFloat(e.rendement) >= 50 && parseFloat(e.rendement) <= 70
+    ).length;
+    let averageGoodEmp = tempData.filter(
+      (e) => parseFloat(e.rendement) > 70
+    ).length;
+
+    let avgFaiblePercent = getPercentOf(averageFaibleEmp, tempData.length);
+    let avgMoyennePercent = getPercentOf(averageMoyenneEmp, tempData.length);
+    let avgGoodPercent = getPercentOf(averageGoodEmp, tempData.length);
+
+    setCustomEmployees(tempData);
+    setTopEmployees(top5);
+    setChartData([
+      { x: "Excellent", y: avgGoodPercent, text: `${avgGoodPercent}%` },
+      { x: "Moyenne", y: avgMoyennePercent, text: `${avgMoyennePercent}%` },
+      { x: "Faible", y: avgFaiblePercent, text: `${avgFaiblePercent} %` },
+    ]);
+
+    console.log(tempData);
+  }, [setCustomEmployees, setTopEmployees, setChartData]);
+
+  /**
+   *
+   */
 
   return (
-    <div className={currentMode === 'Dark' ? 'dark' : ''}>
+    <div>
       <BrowserRouter>
         <div className="flex relative dark:bg-main-dark-bg">
-          <div className="fixed right-4 bottom-4" style={{ zIndex: '1000' }}>
-            <TooltipComponent
-              content="Settings"
-              position="Top"
-            >
-              <button
-                type="button"
-                onClick={() => setThemeSettings(true)}
-                style={{ background: currentColor, borderRadius: '50%' }}
-                className="text-3xl text-white p-3 hover:drop-shadow-xl hover:bg-light-gray"
-              >
-                <FiSettings />
-              </button>
-
-            </TooltipComponent>
-          </div>
           {activeMenu ? (
             <div className="w-72 fixed sidebar dark:bg-secondary-dark-bg bg-white ">
               <Sidebar />
@@ -53,45 +113,44 @@ const App = () => {
           <div
             className={
               activeMenu
-                ? 'dark:bg-main-dark-bg  bg-main-bg min-h-screen md:ml-72 w-full  '
-                : 'bg-main-bg dark:bg-main-dark-bg  w-full min-h-screen flex-2 '
+                ? "dark:bg-main-dark-bg  bg-main-bg min-h-screen md:ml-72 w-full  "
+                : "bg-main-bg dark:bg-main-dark-bg  w-full min-h-screen flex-2 "
             }
           >
             <div className="fixed md:static bg-main-bg dark:bg-main-dark-bg navbar w-full ">
               <Navbar />
             </div>
             <div>
-              {themeSettings && (<ThemeSettings />)}
-
               <Routes>
                 {/* dashboard  */}
-                <Route path="/" element={(<Ecommerce />)} />
-                <Route path="/ecommerce" element={(<Ecommerce />)} />
+                <Route
+                  path="/"
+                  element={
+                    <Home
+                      data={CustomEmployees}
+                      top5={topEmployees}
+                      chartData={chartData}
+                    />
+                  }
+                />
+                <Route
+                  path="/home"
+                  element={
+                    <Home
+                      data={CustomEmployees}
+                      top5={topEmployees}
+                      chartData={chartData}
+                    />
+                  }
+                />
 
                 {/* pages  */}
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/employees" element={<Employees />} />
-                <Route path="/customers" element={<Customers />} />
-
-                {/* apps  */}
-                <Route path="/kanban" element={<Kanban />} />
-                <Route path="/editor" element={<Editor />} />
-                <Route path="/calendar" element={<Calendar />} />
-                <Route path="/color-picker" element={<ColorPicker />} />
-
-                {/* charts  */}
-                <Route path="/line" element={<Line />} />
-                <Route path="/area" element={<Area />} />
-                <Route path="/bar" element={<Bar />} />
-                <Route path="/pie" element={<Pie />} />
-                <Route path="/financial" element={<Financial />} />
-                <Route path="/color-mapping" element={<ColorMapping />} />
-                <Route path="/pyramid" element={<Pyramid />} />
-                <Route path="/stacked" element={<Stacked />} />
-
+                <Route
+                  path="/employees"
+                  element={<Employees data={CustomEmployees} />}
+                />
               </Routes>
             </div>
-            <Footer />
           </div>
         </div>
       </BrowserRouter>

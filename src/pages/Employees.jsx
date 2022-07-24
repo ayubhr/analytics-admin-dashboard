@@ -1,32 +1,49 @@
-import React from 'react';
-import { GridComponent, Inject, ColumnsDirective, ColumnDirective, Search, Page } from '@syncfusion/ej2-react-grids';
+import React from "react";
+import {
+  GridComponent,
+  ColumnsDirective,
+  ColumnDirective,
+  Page,
+  Selection,
+  Inject,
+  Edit,
+  Toolbar,
+  Sort,
+  Filter,
+} from "@syncfusion/ej2-react-grids";
 
-import { employeesData, employeesGrid } from '../data/dummy';
-import { Header } from '../components';
+import { employeesGridNew } from "../utils/functions";
+import { Header } from "../components";
 
-const Employees = () => {
-  const toolbarOptions = ['Search'];
-
-  const editing = { allowDeleting: true, allowEditing: true };
+const Employees = ({ data }) => {
+  const selectionsettings = { persistSelection: true };
+  const toolbarOptions = ["Search"];
+  const FilterOptions = { type: "Menu" };
+  const editing = { allowDeleting: false, allowEditing: false };
 
   return (
     <div className="m-2 md:m-10 mt-24 p-2 md:p-10 bg-white rounded-3xl">
-      <Header category="Page" title="Employees" />
+      <Header category="Page" title="Employés" />
       <GridComponent
-        dataSource={employeesData}
+        dataSource={data}
         width="auto"
+        enableHover={false}
         allowPaging
+        autoFit={true}
         allowSorting
-        pageSettings={{ pageCount: 5 }}
+        filterSettings={FilterOptions}
+        allowFiltering={true}
+        pageSettings={{ pageCount: 10 }}
         editSettings={editing}
+        selectionSettings={selectionsettings}
         toolbar={toolbarOptions}
       >
         <ColumnsDirective>
-          {/* eslint-disable-next-line react/jsx-props-no-spreading */}
-          {employeesGrid.map((item, index) => <ColumnDirective key={index} {...item} />)}
+          {employeesGridNew.map((item, index) => (
+            <ColumnDirective key={index} {...item} />
+          ))}
         </ColumnsDirective>
-        <Inject services={[Search, Page]} />
-
+        <Inject services={[Page, Selection, Toolbar, Edit, Sort, Filter]} />
       </GridComponent>
     </div>
   );
